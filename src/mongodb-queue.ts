@@ -7,7 +7,13 @@
  */
 
 import crypto from 'crypto';
-import type { Db, Filter, UpdateFilter } from 'mongodb';
+import type {
+  Db, 
+  Filter, 
+  UpdateFilter,
+  FindOneAndUpdateOptions,
+  ModifyResult,
+} from 'mongodb';
 
 // some helper functions
 function id() {
@@ -120,7 +126,7 @@ class MongoDbQueueImpl implements MongoDbQueue {
       };
     }
 
-    const message = await this.collection.findOneAndUpdate(
+    const message = (await this.collection.findOneAndUpdate(
       filter,
       {
         $inc: { occurrences: 1 },
@@ -129,8 +135,12 @@ class MongoDbQueueImpl implements MongoDbQueue {
         },
         $setOnInsert: insertFields,
       },
-      { upsert: true, returnDocument: 'after' },
-    );
+      {
+        upsert: true,
+        returnDocument: 'after',
+        includeResultMetadata: true,
+      } as FindOneAndUpdateOptions,
+    )) as unknown as ModifyResult<MessageSchema>;
 
     if (!message.value) {
       throw new Error(`Queue.add(): Failed add message`);
@@ -159,10 +169,11 @@ class MongoDbQueueImpl implements MongoDbQueue {
       },
     };
 
-    const result = await this.collection.findOneAndUpdate(query, update, {
+    const result = (await this.collection.findOneAndUpdate(query, update, {
       sort: { _id: 1 },
       returnDocument: 'after',
-    });
+      includeResultMetadata: true,
+    } as FindOneAndUpdateOptions)) as unknown as ModifyResult<MessageSchema>;
 
     const message = result.value;
 
@@ -203,9 +214,10 @@ class MongoDbQueueImpl implements MongoDbQueue {
       },
     };
 
-    const message = await this.collection.findOneAndUpdate(query, update, {
+    const message = (await this.collection.findOneAndUpdate(query, update, {
       returnDocument: 'after',
-    });
+      includeResultMetadata: true,
+    } as FindOneAndUpdateOptions)) as unknown as ModifyResult<MessageSchema>;
 
     if (!message.value) {
       throw new Error(`Queue.ping(): Unidentified ack : ${ack}`);
@@ -229,7 +241,8 @@ class MongoDbQueueImpl implements MongoDbQueue {
 
     const message = await this.collection.findOneAndUpdate(query, update, {
       returnDocument: 'after',
-    });
+      includeResultMetadata: true,
+    } as FindOneAndUpdateOptions) as unknown as ModifyResult<MessageSchema>;
 
     if (!message.value) {
       throw new Error(`Queue.ack(): Unidentified ack : ${ack}`);
