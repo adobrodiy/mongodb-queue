@@ -8,8 +8,8 @@
 
 import crypto from 'crypto';
 import type {
-  Db, 
-  Filter, 
+  Db,
+  Filter,
   UpdateFilter,
   FindOneAndUpdateOptions,
   ModifyResult,
@@ -122,6 +122,8 @@ class MongoDbQueueImpl implements MongoDbQueue {
 
     if (typeof payload === 'object') {
       filter = {
+        /* eslint-disable-next-line */
+        // @ts-ignore
         [`payload.${hashKey}`]: payload[hashKey as keyof T],
       };
     }
@@ -239,10 +241,10 @@ class MongoDbQueueImpl implements MongoDbQueue {
       },
     };
 
-    const message = await this.collection.findOneAndUpdate(query, update, {
+    const message = (await this.collection.findOneAndUpdate(query, update, {
       returnDocument: 'after',
       includeResultMetadata: true,
-    } as FindOneAndUpdateOptions) as unknown as ModifyResult<MessageSchema>;
+    } as FindOneAndUpdateOptions)) as unknown as ModifyResult<MessageSchema>;
 
     if (!message.value) {
       throw new Error(`Queue.ack(): Unidentified ack : ${ack}`);
